@@ -147,7 +147,7 @@ class Exp_Main(Exp_Basic):
         return self.model
 
     def test(self, setting, test=0):
-        _, test_loader = self._get_data(flag='test')
+        test_set, test_loader = self._get_data(flag='test')
 
         if test:
             print('loading model')
@@ -178,10 +178,62 @@ class Exp_Main(Exp_Basic):
                 #print("batch_y shape:", batch_y.shape)
 
                 pred = outputs.detach().cpu().numpy()
+                #print("pred shape0:", pred.shape)
+                #print(pred)
                 true = batch_y.detach().cpu().numpy()
+                import pandas as pd
+                pred = pd.DataFrame(pred)
+                pred.to_csv('original.csv', index=False)
+                pred = pred.values
+
+
+                pred = pred.reshape(64*96, 1)
+                true = true.reshape(64*96, 1)
+
+                pred = pd.DataFrame(pred)
+                pred.to_csv('6496e.csv', index=False)
+                pred = pred.values
+
+                #print("pred shape1:", pred.shape)
+                pred = np.repeat(pred, 8, axis=1)
+                true = np.repeat(true, 8, axis=1)
+                #print("pred shape2:", pred.shape)
+
+                pred = pd.DataFrame(pred)
+                pred.to_csv('repeat.csv', index=False)
+                pred = pred.values
+
+                pred = test_set.inverse_transform(pred)
+                #print("pred shape3:", pred.shape)
+                true = test_set.inverse_transform(true)
+
+                pred = pd.DataFrame(pred)
+                pred.to_csv('inverse.csv', index=False)
+                pred = pred.values
+
+                pred = pred[:, -1]
+                #print("pred shape4:", pred.shape)
+
+                pred = pd.DataFrame(pred)
+                pred.to_csv('lastlie.csv', index=False)
+                pred = pred.values
+
+                true = true[:, -1]
+                pred = pred.reshape(64, 96)
+                true = true.reshape(64, 96)
+
+                true = pd.DataFrame(true)
+                true.to_csv('truevalue.csv', index=False)
+                true = true.values
+
                 preds.append(pred)
+                #print("len preds:",len(preds))
+                #print(preds)
                 trues.append(true)
                 inputx.append(batch_x.detach().cpu().numpy())
+
+                #preds = test_set.inverse_transform(preds)
+                #trues = test_set.inverse_transform(trues)
 
                 if idx % self.args.seg == 0:
                     input = batch_x.detach().cpu().numpy()
@@ -194,13 +246,22 @@ class Exp_Main(Exp_Basic):
 
         print("input dimensions:", input.ndim)
         print("true dimensions:", true.ndim)
+        #print("type:",type(preds))
+
         preds = np.array(preds)
         trues = np.array(trues)
         inputx = np.array(inputx)
+        #print("preds shape1:", preds.shape)
+
+        #preds = test_set.inverse_transform(preds)
+        #trues = test_set.inverse_transform(trues)
 
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+        #print("preds shape2:", preds.shape)
+
         inputx = inputx.reshape(-1, inputx.shape[-2], inputx.shape[-1])
+
 
         mse, mae, mape, r_squared = metric(preds, trues)
         print('mse:{:.4f}, mae:{:.4f},  mape:{:.4f}, R2:{:.4f}'.format(mse, mae, mape, r_squared))
@@ -213,7 +274,7 @@ class Exp_Main(Exp_Basic):
         if load:
             path = os.path.join(self.args.checkpoints, setting)
             best_model_path = path + '/' + 'checkpoint.pth'
-            self.model.load_state_dict(torch.load(best_model_path))
+            self.model.load_state_dict(torch.load(best_model_path)),
 
         preds = []
         self.model.eval()
